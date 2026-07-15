@@ -5,6 +5,11 @@
     "proxy": "clipboard"
   },
   "headers": {},
+  "requestContext": {
+    "authorizer": {
+      "userId": "placeholder"
+    }
+  },
   "isBase64Encoded": false,
   "body": null
 }

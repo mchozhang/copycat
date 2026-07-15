@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import json
 import os
 
 import boto3
@@ -60,3 +61,21 @@ def _build_policy(user_id, effect, method_arn):
             "userId": user_id,
         },
     }
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Test Lambda authorizer locally")
+    parser.add_argument("--user-id", "-u", required=True, help="User ID")
+    parser.add_argument("--api-key", "-k", required=True, help="API key")
+    args = parser.parse_args()
+
+    token = base64.b64encode(f"{args.user_id}:{args.api_key}".encode()).decode()
+    mock_event = {
+        "authorizationToken": f"Basic {token}",
+        "methodArn": "arn:aws:execute-api:us-east-1:123456789012:api-id/prod/GET/clipboard",
+    }
+
+    result = lambda_handler(mock_event, None)
+    print(json.dumps(result, indent=2))
