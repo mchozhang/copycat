@@ -1,0 +1,10 @@
+{
+  "httpMethod": "GET",
+  "path": "/clipboard",
+  "pathParameters": {
+    "proxy": "clipboard"
+  },
+  "headers": {},
+  "isBase64Encoded": false,
+  "body": null
+}

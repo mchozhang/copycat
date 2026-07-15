@@ -1,0 +1,12 @@
+{
+  "httpMethod": "POST",
+  "path": "/clipboard",
+  "pathParameters": {
+    "proxy": "clipboard"
+  },
+  "headers": {
+    "content-type": "multipart/form-data; boundary=----FormBoundary7MA4YWxkTrZu0gW"
+  },
+  "isBase64Encoded": true,
+  "body": "LS0tLS0tRm9ybUJvdW5kYXJ5N01BNFlXeGtUclp1MGdXDQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9ImZpbGUiOyBmaWxlbmFtZT0iZXhhbXBsZS50eHQiDQpDb250ZW50LVR5cGU6IHRleHQvcGxhaW4NCg0KSGVsbG8sIHRoaXMgaXMgdGhlIGNsaXBib2FyZCBmaWxlIGNvbnRlbnQuDQotLS0tLS1Gb3JtQm91bmRhcnk3TUE0WVd4a1RyWnUwZ1cNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0iYm9keSINCkNvbnRlbnQtVHlwZTogYXBwbGljYXRpb24vanNvbg0KDQp7InRleHQiOiAiSGVsbG8gZnJvbSBjbGlwYm9hcmQiLCAiaHRtbCI6ICI8cD5IZWxsbyBmcm9tIGNsaXBib2FyZDwvcD4ifQ0KLS0tLS0tRm9ybUJvdW5kYXJ5N01BNFlXeGtUclp1MGdXLS0NCg=="
+}

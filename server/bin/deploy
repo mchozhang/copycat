@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -eu -o pipefail
+
+basedir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# export environment variables from .env
+set -a && source "$basedir/.env" && set +a
+
+aws_account_id="$(aws sts get-caller-identity --query Account --output text)"
+aws_region="$(aws configure get region || echo "ap-southeast-2")"
+bucket="${CFN_BUCKET_PREFIX}-${aws_region}-${aws_account_id}"
+
+sam validate --lint -t "$basedir/template.yaml"
+
+# create bucket for sam template if not exists
+if ! aws s3 ls "s3://$bucket" &>/dev/null; then
+  aws s3 mb "s3://$bucket"
+fi
+
+sam build --template-file "$basedir/template.yaml"
+
+sam deploy \
+  --s3-bucket "$bucket" \
+  --stack-name "$CFN_STACK_NAME" \
+  --capabilities CAPABILITY_IAM \
+  --parameter-overrides \
+    ClipboardBucketPrefix="$CLIPBOARD_BUCKET_PREFIX" \
+    DdbUserTable="$DDB_USER_TABLE" \
+    DdbClipboardTable="$DDB_CLIPBOARD_TABLE" \
+    ClipboardTTL="$CLIPBOARD_TTL"

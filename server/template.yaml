@@ -1,0 +1,126 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Copycat stack
+
+Parameters:
+  ClipboardBucketPrefix:
+    Type: String
+    Default: "copycat-clipboard-bucket"
+  DdbUserTable:
+    Type: String
+    Default: "copycat-users"
+  DdbClipboardTable:
+    Type: String
+    Default: "copycat-clipboard"
+  ClipboardTTL:
+    Type: Number
+    Default: "86400"
+    Description: "Number of seconds before clipboard entries expire"
+
+Resources:
+  AuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: 'copycat-authorizer'
+      CodeUri: src/
+      Handler: authorizer.lambda_handler
+      Runtime: python3.14
+      Timeout: 10
+      Environment:
+        Variables:
+          DDB_USER_TABLE: !Ref UserTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref UserTable
+
+  ClipboardFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: 'copycat-function'
+      CodeUri: src/
+      Handler: app.lambda_handler
+      Runtime: python3.14
+      Timeout: 10
+      Environment:
+        Variables:
+          DDB_USER_TABLE: !Ref UserTable
+          DDB_CLIPBOARD_TABLE: !Ref ClipboardTable
+          CLIPBOARD_BUCKET: !Ref ClipboardBucket
+          CLIPBOARD_TTL: !Ref ClipboardTTL
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ClipboardTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref UserTable
+        - S3CrudPolicy:
+            BucketName: !Ref ClipboardBucket
+      Events:
+        ProxyApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ClipboardApi
+            Path: /{proxy+}
+            Method: ANY
+
+  ClipboardApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      BinaryMediaTypes:
+        - multipart/form-data
+      Auth:
+        DefaultAuthorizer: BasicAuthorizer
+        Authorizers:
+          BasicAuthorizer:
+            FunctionArn: !GetAtt AuthorizerFunction.Arn
+            FunctionPayloadType: TOKEN
+            Identity:
+              Header: Authorization
+              ReauthorizeEvery: 300
+
+  UserTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref DdbUserTable
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: user-id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: user-id
+          KeyType: HASH
+
+  ClipboardTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref DdbClipboardTable
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: user-id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: user-id
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  ClipboardBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ClipboardBucketPrefix}-${AWS::Region}-${AWS::AccountId}"
+      VersioningConfiguration:
+        Status: Suspended
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireFiles
+            Status: Enabled
+            ExpirationInDays: 1
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub "https://${ClipboardApi}.execute-api.${AWS::Region}.amazonaws.com/prod"
+  ClipboardFunctionArn:
+    Description: Lambda function ARN
+    Value: !GetAtt ClipboardFunction.Arn

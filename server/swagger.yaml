@@ -1,0 +1,115 @@
+openapi: 3.0.4
+
+info:
+  title: Copycat Clipboard API
+  version: 1.0.0
+
+servers:
+  - url: https://api.example.com
+
+security: []  # auth method TBD
+
+paths:
+  /clipboard:
+    get:
+      summary: Get clipboard content from the server
+      description: Returns the clipboard text, HTML, and/or a presigned URL to download the attached file.
+      responses:
+        '200':
+          description: Clipboard content retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClipboardBody'
+              example:
+                text: "Quarterly Report"
+                html: "<html>Quarterly Report</html>"
+                image:
+                  name: "photo.png"
+                  url: "https://s3.amazonaws.com/bucket/key?X-Amz-Signature=..."
+        '404':
+          description: No clipboard content found.
+        '500':
+          description: Internal server error.
+
+    post:
+      summary: Upload clipboard content to the server
+      description: |
+        Supports plain text, HTML, an image, or a file up to 5 MB.
+        - **Without attachment:** use `application/json`
+        - **With image:** use `multipart/form-data` with an `image` field and a `body` field (JSON)
+        - **With file:** use `multipart/form-data` with a `file` field and a `body` field (JSON)
+        
+        `image` and `file` are mutually exclusive — only one may be present per request.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClipboardBody'
+            example:
+              text: "Quarterly Report"
+              html: "<html>Quarterly Report</html>"
+
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: Image content (max 5 MB). Mutually exclusive with `file`.
+                file:
+                  type: string
+                  format: binary
+                  description: File content (max 5 MB). Mutually exclusive with `image`.
+                body:
+                  $ref: '#/components/schemas/ClipboardBody'
+            encoding:
+              body:
+                contentType: application/json
+
+      responses:
+        '201':
+          description: Clipboard item created.
+        '400':
+          description: Invalid request.
+        '500':
+          description: Internal server error.
+
+components:
+  schemas:
+    ClipboardBody:
+      type: object
+      description: Clipboard content. `image` and `file` are mutually exclusive.
+      properties:
+        text:
+          type: string
+          example: "Quarterly Report"
+        html:
+          type: string
+          example: "<html>Quarterly Report</html>"
+        image:
+          type: object
+          description: Present when the clipboard item has an image attachment.
+          properties:
+            name:
+              type: string
+              description: Original filename.
+              example: "photo.png"
+            url:
+              type: string
+              description: Presigned S3 URL to download the image. Expires after a short period.
+              example: "https://s3.amazonaws.com/bucket/key?X-Amz-Signature=..."
+        file:
+          type: object
+          description: Present when the clipboard item has a non-image file attachment.
+          properties:
+            name:
+              type: string
+              description: Original filename.
+              example: "report.pdf"
+            url:
+              type: string
+              description: Presigned S3 URL to download the file. Expires after a short period.
+              example: "https://s3.amazonaws.com/bucket/key?X-Amz-Signature=..."

@@ -1,0 +1,12 @@
+{
+  "httpMethod": "POST",
+  "path": "/clipboard",
+  "pathParameters": {
+    "proxy": "clipboard"
+  },
+  "headers": {
+    "content-type": "application/json"
+  },
+  "isBase64Encoded": false,
+  "body": "{\"html\": \"<p>Hello from clipboard</p>\"}"
+}

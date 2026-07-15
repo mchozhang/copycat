@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+set -eu -o pipefail
+
+basedir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# export environment variables from .env
+set -a && source "$basedir/.env" && set +a
+
+usage() {
+  echo "Usage: $(basename "$0") --user-id <user-id> --api-key <api-key> [--dry-run]"
+  exit 1
+}
+
+user_id=""
+api_key=""
+dry_run=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --user-id | -u) user_id="$2"; shift 2 ;;
+    --api-key | -k) api_key="$2"; shift 2 ;;
+    --dry-run | -d) dry_run=1; shift ;;
+    *) usage ;;
+  esac
+done
+
+[[ -z "$user_id" || -z "$api_key" ]] && usage
+
+salt="$(openssl rand -hex 16)"
+hashed_key="$(printf '%s%s' "$salt" "$api_key" | openssl dgst -sha256 -hex | awk '{print $NF}')"
+
+if [ "$dry_run" = 0 ]; then
+  aws dynamodb put-item --table-name "$DDB_USER_TABLE" --item "{
+      \"user-id\": {\"S\": \"$user_id\"},
+      \"api-key\": {\"S\": \"$hashed_key\"},
+      \"salt\":    {\"S\": \"$salt\"}
+    }"
+  echo "User '$user_id' added successfully." >&2
+else
+  echo "[dry run] User '$user_id' added successfully." >&2
+fi
+
+jq -n --arg u "$user_id" --arg k "$hashed_key" --arg s "$salt" '{
+      user_id: $u,
+      hased_api_key: $k,
+      salt: $s
+  }'
+

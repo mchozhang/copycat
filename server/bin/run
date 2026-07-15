@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -eu -o pipefail
+
+basedir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# export environment variables from .env
+set -a && source "$basedir/.env" && set +a
+
+aws_account_id="$(aws sts get-caller-identity --query Account --output text)"
+aws_region="$(aws configure get region || echo "ap-southeast-2")"
+export CLIPBOARD_BUCKET
+CLIPBOARD_BUCKET="$CLIPBOARD_BUCKET_PREFIX-${aws_region}-${aws_account_id}"
+
+event="$1"
+python3 "$basedir/src/app.py" "$event"
